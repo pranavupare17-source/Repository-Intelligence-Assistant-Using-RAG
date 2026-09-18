@@ -1,0 +1,17 @@
+# Core AST & Parsing
+tree-sitter>=0.24.0
+tree-sitter-python>=0.23.0
+
+# Vector Indexing & Embeddings
+faiss-cpu>=1.9.0
+numpy>=1.26.0
+google-genai>=1.0.0
+openai>=1.50.0
+
+# Graph Infrastructure (Phase 3 readiness)
+networkx>=3.2.0
+
+# Utilities & Formatting
+python-dotenv>=1.0.0
+rich>=13.7.0
+pytest>=8.0.0
