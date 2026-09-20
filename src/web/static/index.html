@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Repository Intelligence Assistant | AST Code RAG & Dependency Graph</title>
+  <meta name="description" content="State-of-the-art codebase Question-Answering and Knowledge Graph system built from scratch in pure Python with Tree-Sitter, FAISS, and NetworkX.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css">
+</head>
+<body>
+  <div class="app-shell">
+    <!-- TOP NAVIGATION BAR -->
+    <header class="app-header">
+      <div class="header-brand">
+        <div class="brand-logo">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <polygon points="12 2 2 7 12 12 22 7 12 2"></polygon>
+            <polyline points="2 17 12 22 22 17"></polyline>
+            <polyline points="2 12 12 17 22 12"></polyline>
+          </svg>
+        </div>
+        <div class="brand-text">
+          <h1>Repository Intelligence Assistant</h1>
+          <span class="brand-subtitle">Pure Python Code RAG & Dependency Knowledge Graph</span>
+        </div>
+      </div>
+
+      <!-- SYSTEM TELEMETRY BADGES -->
+      <div class="system-status-pills">
+        <div class="status-pill" id="pill-ast" title="Tree-Sitter Concrete Syntax Tree Parser">
+          <span class="status-dot green"></span>
+          <span class="status-label">AST: <strong id="stat-chunks-count">--</strong> Chunks</span>
+        </div>
+        <div class="status-pill" id="pill-vector" title="Normalized FAISS IndexFlatIP Cosine Retrieval">
+          <span class="status-dot cyan"></span>
+          <span class="status-label">FAISS: <strong id="stat-vectors-count">--</strong> Dim: <span id="stat-dim">--</span></span>
+        </div>
+        <div class="status-pill" id="pill-graph" title="NetworkX Code Dependency Knowledge Graph">
+          <span class="status-dot purple"></span>
+          <span class="status-label">Graph: <strong id="stat-nodes-count">--</strong> N / <strong id="stat-edges-count">--</strong> E</span>
+        </div>
+      </div>
+
+      <!-- MAIN TABS -->
+      <nav class="header-tabs" role="tablist">
+        <button class="nav-tab active" data-tab="graph" id="tab-btn-graph" role="tab" aria-selected="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+          Phase 3: Knowledge Graph
+        </button>
+        <button class="nav-tab" data-tab="search" id="tab-btn-search" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+          Phase 2: Semantic Search
+        </button>
+        <button class="nav-tab" data-tab="chunks" id="tab-btn-chunks" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
+          Phase 1: AST Chunker
+        </button>
+        <button class="nav-tab" data-tab="defense" id="tab-btn-defense" role="tab" aria-selected="false">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          Academic Defense & Viva
+        </button>
+      </nav>
+    </header>
+
+    <!-- CONTENT PANELS -->
+    <main class="app-content">
+
+      <!-- ================== TAB 1: KNOWLEDGE GRAPH ================== -->
+      <section class="tab-panel active" id="panel-graph" role="tabpanel">
+        <div class="graph-layout">
+          <div class="graph-main">
+            <!-- GRAPH CONTROLS TOOLBAR -->
+            <div class="graph-toolbar">
+              <div class="toolbar-group search-group">
+                <input type="text" id="graph-search-input" placeholder="Search symbol or method (e.g. verify_token)..." aria-label="Search graph symbol">
+                <button id="graph-search-btn" class="btn btn-secondary">Find</button>
+              </div>
+
+              <div class="toolbar-group filter-group">
+                <span class="group-label">Show:</span>
+                <label class="filter-check"><input type="checkbox" id="filter-file" checked> <span class="badge-dot file"></span> Files</label>
+                <label class="filter-check"><input type="checkbox" id="filter-class" checked> <span class="badge-dot class"></span> Classes</label>
+                <label class="filter-check"><input type="checkbox" id="filter-method" checked> <span class="badge-dot method"></span> Methods</label>
+                <label class="filter-check"><input type="checkbox" id="filter-function" checked> <span class="badge-dot function"></span> Functions</label>
+                <label class="filter-check"><input type="checkbox" id="filter-module" checked> <span class="badge-dot module"></span> Modules</label>
+              </div>
+
+              <div class="toolbar-group action-group">
+                <button id="btn-zoom-in" class="btn-icon" title="Zoom In">+</button>
+                <button id="btn-zoom-out" class="btn-icon" title="Zoom Out">−</button>
+                <button id="btn-reset-view" class="btn-icon" title="Reset View">⟲</button>
+                <button id="btn-toggle-path" class="btn btn-sm btn-outline">Call-Chain Path</button>
+              </div>
+            </div>
+
+            <!-- PATH FINDER POPUP -->
+            <div class="path-finder-bar hidden" id="path-finder-bar">
+              <div class="path-input-wrap">
+                <label>From:</label>
+                <input type="text" id="path-src-input" value="process_order" placeholder="Source symbol">
+              </div>
+              <div class="path-arrow">──></div>
+              <div class="path-input-wrap">
+                <label>To:</label>
+                <input type="text" id="path-tgt-input" value="verify_token" placeholder="Target symbol">
+              </div>
+              <button id="btn-find-path" class="btn btn-primary btn-sm">Find Shortest Call Chain</button>
+              <button id="btn-close-path" class="btn-icon btn-sm">✕</button>
+            </div>
+
+            <!-- GRAPH CANVAS CONTAINER -->
+            <div class="canvas-container" id="canvas-wrapper">
+              <canvas id="graph-canvas"></canvas>
+              <div class="graph-legend">
+                <div class="legend-item"><span class="badge-dot file"></span> File</div>
+                <div class="legend-item"><span class="badge-dot class"></span> Class</div>
+                <div class="legend-item"><span class="badge-dot method"></span> Method</div>
+                <div class="legend-item"><span class="badge-dot function"></span> Function</div>
+                <div class="legend-item"><span class="badge-dot module"></span> External/Module</div>
+              </div>
+              <div class="graph-hint">
+                <span>Drag to move • Scroll to zoom • Click node to inspect</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- SIDE INSPECTOR DRAWER -->
+          <aside class="graph-sidebar" id="node-inspector">
+            <div class="inspector-header">
+              <div class="inspector-title-wrap">
+                <span class="type-pill" id="insp-type">Node</span>
+                <h3 id="insp-name">Select a Node</h3>
+              </div>
+              <span class="citation-badge" id="insp-citation">--</span>
+            </div>
+
+            <div class="inspector-body" id="insp-body">
+              <div class="empty-state" id="insp-empty">
+                <p>Click any node in the knowledge graph to inspect its AST scope, callers, callees, code citation, and calculate its transitive blast radius.</p>
+              </div>
+
+              <div class="inspector-details hidden" id="insp-content">
+                <!-- ACTIONS -->
+                <div class="inspector-actions">
+                  <button id="btn-calc-blast" class="btn btn-danger btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
+                    Calculate Blast Radius
+                  </button>
+                  <button id="btn-search-this" class="btn btn-secondary btn-sm">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                    Semantic Search
+                  </button>
+                </div>
+
+                <!-- DOCSTRING -->
+                <div class="insp-section" id="insp-docstring-sec">
+                  <h4>Docstring</h4>
+                  <p class="docstring-box" id="insp-docstring">No docstring available.</p>
+                </div>
+
+                <!-- UPSTREAM CALLERS -->
+                <div class="insp-section">
+                  <h4 id="insp-callers-title">Upstream Callers (0)</h4>
+                  <div class="item-list" id="insp-callers-list"></div>
+                </div>
+
+                <!-- DOWNSTREAM CALLEES -->
+                <div class="insp-section">
+                  <h4 id="insp-callees-title">Downstream Callees (0)</h4>
+                  <div class="item-list" id="insp-callees-list"></div>
+                </div>
+
+                <!-- BLAST RADIUS BOX -->
+                <div class="insp-section hidden" id="insp-blast-sec">
+                  <h4 class="text-danger" id="insp-blast-title">💥 Impact Blast Radius (0 affected)</h4>
+                  <div class="blast-tree" id="insp-blast-tree"></div>
+                </div>
+
+                <!-- SOURCE CODE PREVIEW -->
+                <div class="insp-section" id="insp-code-sec">
+                  <h4>Source Code</h4>
+                  <pre class="code-preview"><code id="insp-code"></code></pre>
+                </div>
+              </div>
+            </div>
+          </aside>
+        </div>
+      </section>
+
+      <!-- ================== TAB 2: SEMANTIC VECTOR SEARCH ================== -->
+      <section class="tab-panel" id="panel-search" role="tabpanel">
+        <div class="search-container">
+          <div class="search-hero">
+            <h2>Dense FAISS IndexFlatIP Cosine Retrieval</h2>
+            <p class="hero-desc">Every query is embedded and normalized such that $\|A\|_2 = \|B\|_2 = 1$. The inner product is mathematically identical to Cosine Similarity, retrieving AST chunks enriched with parent class headers.</p>
+
+            <form class="search-form" id="search-form">
+              <div class="search-input-wrapper">
+                <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                <input type="text" id="search-input" placeholder="Ask questions about the repository (e.g. how is token expiration verified?)..." value="how is token expiration verified?">
+                <button type="submit" class="btn btn-primary" id="btn-run-search">Search Code</button>
+              </div>
+            </form>
+
+            <div class="benchmark-chips">
+              <span class="chips-label">Benchmark Demos:</span>
+              <button class="chip" data-query="how is token expiration verified?">Token Expiration Verification</button>
+              <button class="chip" data-query="where is database connection pool initialized?">Database Connection Pool</button>
+              <button class="chip" data-query="how are credit card charges handled?">Stripe Gateway Charges</button>
+              <button class="chip" data-query="order fulfillment and checkout validation">Order Fulfillment Pipeline</button>
+              <button class="chip" data-query="hash user password with cryptographic salt">Password Hashing & Salt</button>
+            </div>
+          </div>
+
+          <div class="search-results-section">
+            <div class="results-meta">
+              <h3 id="results-count-title">Results</h3>
+              <div class="results-tag" id="results-query-tag"></div>
+            </div>
+
+            <div class="results-list" id="results-list">
+              <div class="empty-state">Enter a query above or click a benchmark demo to execute FAISS cosine search.</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================== TAB 3: AST CHUNKER EXPLORER ================== -->
+      <section class="tab-panel" id="panel-chunks" role="tabpanel">
+        <div class="chunks-layout">
+          <aside class="files-sidebar">
+            <div class="sidebar-header">
+              <h3>Source Files</h3>
+              <span class="badge" id="files-badge">0 files</span>
+            </div>
+            <ul class="file-tree" id="file-tree-list"></ul>
+          </aside>
+
+          <section class="chunks-main">
+            <div class="chunks-header">
+              <div class="file-info">
+                <h3 id="selected-file-title">Select a File</h3>
+                <span class="file-summary" id="selected-file-summary"></span>
+              </div>
+            </div>
+            <div class="chunks-cards-grid" id="chunks-cards-list">
+              <div class="empty-state">Select a source file on the left to view AST chunks and boundaries.</div>
+            </div>
+          </section>
+        </div>
+      </section>
+
+      <!-- ================== TAB 4: ACADEMIC DEFENSE & VIVA ================== -->
+      <section class="tab-panel" id="panel-defense" role="tabpanel">
+        <div class="defense-container">
+          <div class="defense-hero">
+            <h2>Academic Defense & Viva Cheatsheet</h2>
+            <p>Rigorous mathematical proofs, architectural justifications, and zero-framework compliance.</p>
+          </div>
+
+          <!-- COMPARISON TABLE -->
+          <div class="defense-card">
+            <h3>🔬 Architectural Comparison: Naive RAG vs Hand-Rolled Repository Intelligence</h3>
+            <div class="table-responsive">
+              <table class="defense-table">
+                <thead>
+                  <tr>
+                    <th>Feature Dimension</th>
+                    <th>Standard Naive RAG (LangChain / LlamaIndex)</th>
+                    <th>Our Repository Intelligence Assistant</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td><strong>Code Chunking Strategy</strong></td>
+                    <td class="text-dim">Token / character splitting (e.g. 500 chars). Slices functions in half, breaking syntax trees and variable scopes.</td>
+                    <td class="text-success"><strong>AST-Driven Boundaries:</strong> Cuts strictly at <code>class_definition</code> and <code>function_definition</code> using Tree-Sitter C-grammar parser.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Lexical Context Scope</strong></td>
+                    <td class="text-dim">Isolated method text loses enclosing class, module path, and parameter signatures.</td>
+                    <td class="text-success"><strong>Synthetic Context Header Injection:</strong> Prepends structured headers (File, Class, Method, Parameters, Docstrings) before vectorization.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Vector Similarity Math</strong></td>
+                    <td class="text-dim">Generic Euclidean $L_2$ distance or unnormalized inner product with heavy framework wrapper overhead.</td>
+                    <td class="text-success"><strong>Unit $L_2$-Normalized FAISS <code>IndexFlatIP</code>:</strong> Since $\|A\|_2 = \|B\|_2 = 1$, Inner Product $A \cdot B \equiv \cos(\theta)$ at raw C++ SIMD speed.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Citation Precision</strong></td>
+                    <td class="text-dim">Coarse file-level or character offset references.</td>
+                    <td class="text-success"><strong>Exact Academic Citations:</strong> Ground-truth 1-indexed line intervals <code>[file_path:start_line-end_line]</code>.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Architectural Relationships</strong></td>
+                    <td class="text-dim">Isolated vector similarities without knowledge of callers, callees, or inheritance.</td>
+                    <td class="text-success"><strong>NetworkX Dependency Graph:</strong> Call graphs, inter-module imports, inheritance hierarchy, and impact blast-radius analysis.</td>
+                  </tr>
+                  <tr>
+                    <td><strong>Explainability & Defense</strong></td>
+                    <td class="text-dim">Opaque black-box abstractions (<code>RetrievalQA</code>, <code>RecursiveCharacterSplitter</code>).</td>
+                    <td class="text-success"><strong>100% Transparent Python:</strong> Zero framework dependencies; every single line of code is defensible in viva.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- VIVA ACCORDIONS -->
+          <div class="defense-grid">
+            <div class="defense-qna-card">
+              <span class="qna-number">Q1</span>
+              <h4>"Why did you avoid LangChain, LlamaIndex, or Haystack?"</h4>
+              <p>Frameworks like LangChain wrap retrieval in monolithic black boxes designed for unstructured prose. They treat code like plain text, splitting arbitrarily on newline or token boundaries, which cuts loops and conditionals in half. By hand-rolling our system in pure Python, we maintain complete control over concrete syntax tree traversal, context enrichment, and vector math.</p>
+            </div>
+
+            <div class="defense-qna-card">
+              <span class="qna-number">Q2</span>
+              <h4>"How does FAISS IndexFlatIP mathematically compute Cosine Similarity?"</h4>
+              <p>Cosine similarity is mathematically defined as:</p>
+              <div class="math-box">$$\cos(\theta) = \frac{A \cdot B}{\|A\|_2 \|B\|_2}$$</div>
+              <p>In <code>embedder.py</code>, we apply $L_2$ normalization to all vectors so that $\|A\|_2 = 1$ and $\|B\|_2 = 1$. Under this constraint, the denominator equals 1, making Inner Product $A \cdot B \equiv \cos(\theta)$. Using FAISS <code>IndexFlatIP</code> avoids expensive runtime vector division.</p>
+            </div>
+
+            <div class="defense-qna-card">
+              <span class="qna-number">Q3</span>
+              <h4>"What is the role of the Synthetic Context Header?"</h4>
+              <p>Code exhibits high lexical repetition (e.g. methods named <code>verify()</code>, <code>initialize()</code>, <code>charge()</code>). In isolation, embedding vectors lack semantic identity. We synthesize a structured header:</p>
+              <div class="code-box">File: auth.py | Class: TokenService | Method: verify_token(...) | Docstring: Validates token...</div>
+              <p>This anchors the dense vector in its surrounding software architecture.</p>
+            </div>
+
+            <div class="defense-qna-card">
+              <span class="qna-number">Q4</span>
+              <h4>"What is the Value of the Phase 3 Dependency Knowledge Graph?"</h4>
+              <p>Semantic vector search is excellent for conceptual similarity, but blind to deterministic runtime flow. Our Phase 3 Knowledge Graph parses call-sites and imports using tree-sitter into a directed NetworkX graph. This allows our system to answer structural questions like <em>"What happens if I change <code>verify_token</code>?"</em> by traversing upstream callers and computing the transitive blast radius.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

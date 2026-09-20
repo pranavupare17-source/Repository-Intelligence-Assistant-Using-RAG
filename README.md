@@ -98,6 +98,26 @@ python scripts/run_phase2_search.py --repo-path tests/sample_repo --query "how i
 python scripts/run_phase2_search.py --repo-path tests/sample_repo --interactive
 ```
 
+### Phase 3: Code Dependency Knowledge Graph
+Analyze symbol call-sites, cross-module imports, class inheritance, and transitive blast radius using NetworkX:
+```bash
+# Symbol Impact & Caller/Callee Analysis
+python scripts/run_phase3_graph.py --repo-path tests/sample_repo --symbol verify_token
+
+# Shortest Call-Chain Path Finding
+python scripts/run_phase3_graph.py --repo-path tests/sample_repo --path process_order verify_token
+
+# Interactive Terminal Graph Explorer
+python scripts/run_phase3_graph.py --repo-path tests/sample_repo --interactive
+```
+
+### 🌐 Interactive Web Demonstration Dashboard
+Launch the zero-dependency interactive single-page application with real-time force-directed physics graph, live semantic search console, and AST code inspector:
+```bash
+python scripts/run_frontend.py --repo-path tests/sample_repo --port 8000
+```
+Open **`http://localhost:8000`** in your browser.
+
 ---
 
 ## 🎓 Academic Defense / Viva Cheatsheet
@@ -113,6 +133,9 @@ If your guide asks:
 ### 3. "What is the role of the Context Header?"
 > *"Code exhibits high lexical sparsity. An isolated method like `def verify_token(self, token)` lacks its module and class identity. We synthesize a structured context header (`File: auth.py | Class: TokenService | Method: verify_token(...) | Summary: ...`) and prepend it prior to embedding. This grounds the dense vector in its semantic hierarchy."*
 
+### 4. "What is the Purpose of the Phase 3 Dependency Knowledge Graph?"
+> *"Dense vector embeddings capture conceptual and lexical semantics, but are blind to deterministic execution and control flow. Our Phase 3 Knowledge Graph parses call expressions, imports, and inheritance from the tree-sitter Concrete Syntax Tree into a directed NetworkX graph. This allows our system to perform transitive blast-radius analysis (e.g. if `verify_token` breaks, what callers across the system are affected) and find shortest invocation chains between components."*
+
 ---
 
 ## 📂 Project Structure
@@ -121,6 +144,7 @@ If your guide asks:
 ├── .env.example                  # Environment configuration
 ├── .gitignore                    # Git exclusions
 ├── README.md                     # Academic documentation & guide
+├── DEMO_GUIDE.md                 # Complete guide presentation playbook
 ├── requirements.txt              # Pinned low-level dependencies
 ├── src/
 │   ├── core/
@@ -132,20 +156,30 @@ If your guide asks:
 │   ├── indexing/
 │   │   ├── embedder.py           # Gemini, OpenAI & Mock embedders with L2 normalization
 │   │   └── vector_store.py       # FAISS IndexFlatIP wrapper with persistence
-│   └── search/
-│       └── retriever.py          # Semantic search engine with AST symbol boosting
+│   ├── search/
+│   │   └── retriever.py          # Semantic search engine with AST symbol boosting
+│   ├── graph/                    # Phase 3: Code Dependency Knowledge Graph
+│   │   ├── graph_models.py       # GraphNode, GraphEdge, GraphStats schemas
+│   │   ├── ast_call_visitor.py   # Tree-Sitter visitor for calls, imports, inheritance
+│   │   └── dependency_graph.py   # NetworkX DiGraph engine & blast-radius traversals
+│   └── web/                      # Interactive Web Demonstration Dashboard
+│       ├── server.py             # Native Python HTTP REST API server
+│       └── static/               # Single-page glassmorphic UI (HTML, CSS, JS Canvas)
 ├── scripts/
 │   ├── run_phase1_ingestion.py   # Phase 1 CLI demo
-│   └── run_phase2_search.py      # Phase 2 CLI demo with interactive mode
+│   ├── run_phase2_search.py      # Phase 2 CLI demo with interactive mode
+│   ├── run_phase3_graph.py       # Phase 3 CLI demo with blast-radius & call paths
+│   └── run_frontend.py           # Web frontend launcher (http://localhost:8000)
 └── tests/
-    ├── sample_repo/              # Benchmark codebase (auth, db, payments)
+    ├── sample_repo/              # Benchmark codebase (auth, db, payments, order_service)
     ├── test_ast_chunker.py       # Phase 1 test suite
-    └── test_vector_store.py      # Phase 2 test suite
+    ├── test_vector_store.py      # Phase 2 test suite
+    └── test_dependency_graph.py  # Phase 3 test suite
 ```
 
 ---
 
 ## 🔮 Upcoming Phases
-- **Phase 3**: Dependency Knowledge Graph via `networkx` (AST call-site and import extraction).
 - **Phase 4**: Hand-rolled ReAct Loop (Pure while-loop LLM agent with tool dispatch).
 - **Phase 5**: Reciprocal Rank Fusion (RRF) & Grounded Synthesis with strict `[file:line-line]` attribution.
+
