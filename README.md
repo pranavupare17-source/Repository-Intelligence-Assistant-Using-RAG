@@ -78,16 +78,6 @@ cp .env.example .env
 ```
 *(By default, the system includes a deterministic offline `MockEmbedder` so you can demonstrate the entire pipeline to your guide without internet or API keys!)*
 
----
-
-## 🧪 Running the Demos
-
-### Phase 1: Ingestion & AST Chunking Spot-Check
-Run the Phase 1 demonstration script to scan any target repo and print the AST chunk statistics, parent-class relationships, and exact line-range citations:
-```bash
-python scripts/run_phase1_ingestion.py --repo-path tests/sample_repo
-```
-
 ### Phase 2: FAISS Vector Indexing & Semantic Search
 Run semantic retrieval queries against the codebase with colorized code display and ground-truth citations:
 ```bash
