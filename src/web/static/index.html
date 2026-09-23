@@ -58,10 +58,6 @@
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="16 18 22 12 16 6"></polyline><polyline points="8 6 2 12 8 18"></polyline></svg>
           Phase 1: AST Chunker
         </button>
-        <button class="nav-tab" data-tab="defense" id="tab-btn-defense" role="tab" aria-selected="false">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
-          Academic Defense & Viva
-        </button>
       </nav>
     </header>
 
@@ -250,95 +246,6 @@
               <div class="empty-state">Select a source file on the left to view AST chunks and boundaries.</div>
             </div>
           </section>
-        </div>
-      </section>
-
-      <!-- ================== TAB 4: ACADEMIC DEFENSE & VIVA ================== -->
-      <section class="tab-panel" id="panel-defense" role="tabpanel">
-        <div class="defense-container">
-          <div class="defense-hero">
-            <h2>Academic Defense & Viva Cheatsheet</h2>
-            <p>Rigorous mathematical proofs, architectural justifications, and zero-framework compliance.</p>
-          </div>
-
-          <!-- COMPARISON TABLE -->
-          <div class="defense-card">
-            <h3>🔬 Architectural Comparison: Naive RAG vs Hand-Rolled Repository Intelligence</h3>
-            <div class="table-responsive">
-              <table class="defense-table">
-                <thead>
-                  <tr>
-                    <th>Feature Dimension</th>
-                    <th>Standard Naive RAG (LangChain / LlamaIndex)</th>
-                    <th>Our Repository Intelligence Assistant</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr>
-                    <td><strong>Code Chunking Strategy</strong></td>
-                    <td class="text-dim">Token / character splitting (e.g. 500 chars). Slices functions in half, breaking syntax trees and variable scopes.</td>
-                    <td class="text-success"><strong>AST-Driven Boundaries:</strong> Cuts strictly at <code>class_definition</code> and <code>function_definition</code> using Tree-Sitter C-grammar parser.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Lexical Context Scope</strong></td>
-                    <td class="text-dim">Isolated method text loses enclosing class, module path, and parameter signatures.</td>
-                    <td class="text-success"><strong>Synthetic Context Header Injection:</strong> Prepends structured headers (File, Class, Method, Parameters, Docstrings) before vectorization.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Vector Similarity Math</strong></td>
-                    <td class="text-dim">Generic Euclidean $L_2$ distance or unnormalized inner product with heavy framework wrapper overhead.</td>
-                    <td class="text-success"><strong>Unit $L_2$-Normalized FAISS <code>IndexFlatIP</code>:</strong> Since $\|A\|_2 = \|B\|_2 = 1$, Inner Product $A \cdot B \equiv \cos(\theta)$ at raw C++ SIMD speed.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Citation Precision</strong></td>
-                    <td class="text-dim">Coarse file-level or character offset references.</td>
-                    <td class="text-success"><strong>Exact Academic Citations:</strong> Ground-truth 1-indexed line intervals <code>[file_path:start_line-end_line]</code>.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Architectural Relationships</strong></td>
-                    <td class="text-dim">Isolated vector similarities without knowledge of callers, callees, or inheritance.</td>
-                    <td class="text-success"><strong>NetworkX Dependency Graph:</strong> Call graphs, inter-module imports, inheritance hierarchy, and impact blast-radius analysis.</td>
-                  </tr>
-                  <tr>
-                    <td><strong>Explainability & Defense</strong></td>
-                    <td class="text-dim">Opaque black-box abstractions (<code>RetrievalQA</code>, <code>RecursiveCharacterSplitter</code>).</td>
-                    <td class="text-success"><strong>100% Transparent Python:</strong> Zero framework dependencies; every single line of code is defensible in viva.</td>
-                  </tr>
-                </tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- VIVA ACCORDIONS -->
-          <div class="defense-grid">
-            <div class="defense-qna-card">
-              <span class="qna-number">Q1</span>
-              <h4>"Why did you avoid LangChain, LlamaIndex, or Haystack?"</h4>
-              <p>Frameworks like LangChain wrap retrieval in monolithic black boxes designed for unstructured prose. They treat code like plain text, splitting arbitrarily on newline or token boundaries, which cuts loops and conditionals in half. By hand-rolling our system in pure Python, we maintain complete control over concrete syntax tree traversal, context enrichment, and vector math.</p>
-            </div>
-
-            <div class="defense-qna-card">
-              <span class="qna-number">Q2</span>
-              <h4>"How does FAISS IndexFlatIP mathematically compute Cosine Similarity?"</h4>
-              <p>Cosine similarity is mathematically defined as:</p>
-              <div class="math-box">$$\cos(\theta) = \frac{A \cdot B}{\|A\|_2 \|B\|_2}$$</div>
-              <p>In <code>embedder.py</code>, we apply $L_2$ normalization to all vectors so that $\|A\|_2 = 1$ and $\|B\|_2 = 1$. Under this constraint, the denominator equals 1, making Inner Product $A \cdot B \equiv \cos(\theta)$. Using FAISS <code>IndexFlatIP</code> avoids expensive runtime vector division.</p>
-            </div>
-
-            <div class="defense-qna-card">
-              <span class="qna-number">Q3</span>
-              <h4>"What is the role of the Synthetic Context Header?"</h4>
-              <p>Code exhibits high lexical repetition (e.g. methods named <code>verify()</code>, <code>initialize()</code>, <code>charge()</code>). In isolation, embedding vectors lack semantic identity. We synthesize a structured header:</p>
-              <div class="code-box">File: auth.py | Class: TokenService | Method: verify_token(...) | Docstring: Validates token...</div>
-              <p>This anchors the dense vector in its surrounding software architecture.</p>
-            </div>
-
-            <div class="defense-qna-card">
-              <span class="qna-number">Q4</span>
-              <h4>"What is the Value of the Phase 3 Dependency Knowledge Graph?"</h4>
-              <p>Semantic vector search is excellent for conceptual similarity, but blind to deterministic runtime flow. Our Phase 3 Knowledge Graph parses call-sites and imports using tree-sitter into a directed NetworkX graph. This allows our system to answer structural questions like <em>"What happens if I change <code>verify_token</code>?"</em> by traversing upstream callers and computing the transitive blast radius.</p>
-            </div>
-          </div>
         </div>
       </section>
 

@@ -26,20 +26,20 @@ const state = {
   hoverNode: null,
 };
 
-// Node Colors & Radii Configuration
+// Node Colors & Radii Configuration: Matte Industrial Metal Palette
 const NODE_CONFIG = {
-  file: { color: '#38bdf8', glow: 'rgba(56, 189, 248, 0.4)', radius: 16 },
-  class: { color: '#a855f7', glow: 'rgba(168, 85, 247, 0.4)', radius: 14 },
-  method: { color: '#10b981', glow: 'rgba(16, 185, 129, 0.4)', radius: 10 },
-  function: { color: '#34d399', glow: 'rgba(52, 211, 153, 0.4)', radius: 11 },
-  module: { color: '#fbbf24', glow: 'rgba(251, 191, 36, 0.3)', radius: 9 },
+  file: { color: '#27272a', stroke: '#64748b', radius: 14 },
+  class: { color: '#303036', stroke: '#8b8b94', radius: 12 },
+  method: { color: '#242428', stroke: '#a1a1aa', radius: 10 },
+  function: { color: '#1e1e22', stroke: '#71717a', radius: 10 },
+  module: { color: '#18181b', stroke: '#52525b', radius: 8 },
 };
 
 const EDGE_CONFIG = {
-  calls: { color: '#10b981', width: 1.5, dash: [] },
-  imports: { color: '#94a3b8', width: 1.0, dash: [4, 4] },
-  contains: { color: '#6366f1', width: 1.2, dash: [] },
-  inherits: { color: '#f43f5e', width: 2.0, dash: [2, 2] },
+  calls: { color: '#3f3f46', width: 1.2, dash: [] },
+  imports: { color: '#2e2e34', width: 1.0, dash: [4, 4] },
+  contains: { color: '#242428', width: 1.0, dash: [] },
+  inherits: { color: '#52525b', width: 1.5, dash: [2, 2] },
 };
 
 // ==========================================================================
@@ -164,23 +164,34 @@ async function loadGraphData() {
   }
 }
 
+let simAlpha = 0.25;
+const ALPHA_DECAY = 0.95;
+const ALPHA_MIN = 0.003;
+
+function wakeSimulation(targetAlpha = 0.2) {
+  if (simAlpha < targetAlpha) {
+    simAlpha = targetAlpha;
+  }
+}
+
 function setupSimulation(nodes, edges) {
   const width = canvas.width || 800;
   const height = canvas.height || 600;
 
-  // Initialize node positions in circular distribution
+  // Initialize node positions in a calm, spread layout
   const nodeMap = new Map();
   simNodes = nodes.map((n, i) => {
     const angle = (i / nodes.length) * 2 * Math.PI;
-    const r = 180 + (i % 3) * 60;
+    const r = 160 + (i % 4) * 40;
     const sNode = {
       ...n,
-      x: width / 2 + r * Math.cos(angle) + (Math.random() - 0.5) * 40,
-      y: height / 2 + r * Math.sin(angle) + (Math.random() - 0.5) * 40,
+      x: width / 2 + r * Math.cos(angle),
+      y: height / 2 + r * Math.sin(angle),
       vx: 0,
       vy: 0,
       radius: (NODE_CONFIG[n.node_type] || NODE_CONFIG.module).radius,
       color: (NODE_CONFIG[n.node_type] || NODE_CONFIG.module).color,
+      stroke: (NODE_CONFIG[n.node_type] || NODE_CONFIG.module).stroke,
       pinned: false,
     };
     nodeMap.set(n.id, sNode);
@@ -193,6 +204,14 @@ function setupSimulation(nodes, edges) {
     targetNode: nodeMap.get(e.target),
   })).filter(e => e.sourceNode && e.targetNode);
 
+  // Pre-stabilize layout so it starts already clustered and doesn't explode
+  let warmAlpha = 0.7;
+  for (let s = 0; s < 60; s++) {
+    updatePhysics(warmAlpha);
+    warmAlpha *= 0.94;
+  }
+
+  simAlpha = 0.2;
   resetView();
 }
 
@@ -208,42 +227,48 @@ function zoom(factor) {
 function startSimulation() {
   if (animFrameId) cancelAnimationFrame(animFrameId);
 
-  let stepCount = 0;
   function tick() {
-    updatePhysics();
+    if (simAlpha > ALPHA_MIN || state.dragNode) {
+      updatePhysics(simAlpha);
+      if (!state.dragNode) {
+        simAlpha *= ALPHA_DECAY;
+      }
+    }
     renderGraph();
-    stepCount++;
     animFrameId = requestAnimationFrame(tick);
   }
   animFrameId = requestAnimationFrame(tick);
 }
 
-function updatePhysics() {
-  const kRepulse = 3500;
-  const kSpring = 0.04;
-  const damping = 0.88;
-  const centerGravity = 0.015;
+function updatePhysics(alpha = 1.0) {
+  const kRepulse = 1100;
+  const kSpring = 0.025;
+  const damping = 0.72;
+  const centerGravity = 0.006;
+  const maxVelocity = 2.5 * Math.max(alpha, 0.15);
 
   const cx = canvas.width / 2;
   const cy = canvas.height / 2;
 
-  // 1. Center Gravity
+  // 1. Center Gravity (gentle tether)
   for (const n of simNodes) {
     if (n.pinned) continue;
-    n.vx += (cx - n.x) * centerGravity;
-    n.vy += (cy - n.y) * centerGravity;
+    n.vx += (cx - n.x) * centerGravity * alpha;
+    n.vy += (cy - n.y) * centerGravity * alpha;
   }
 
-  // 2. Node-Node Repulsion
+  // 2. Node-Node Repulsion (softened at close range)
   for (let i = 0; i < simNodes.length; i++) {
     const a = simNodes[i];
     for (let j = i + 1; j < simNodes.length; j++) {
       const b = simNodes[j];
       const dx = b.x - a.x;
       const dy = b.y - a.y;
-      let dist = Math.sqrt(dx * dx + dy * dy) || 1;
-      if (dist < 300) {
-        const force = kRepulse / (dist * dist);
+      let dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist === 0) dist = 1;
+      if (dist < 220) {
+        const softDist = Math.max(dist, 40);
+        const force = (kRepulse / (softDist * softDist)) * alpha;
         const fx = (dx / dist) * force;
         const fy = (dy / dist) * force;
         if (!a.pinned) { a.vx -= fx; a.vy -= fy; }
@@ -252,26 +277,32 @@ function updatePhysics() {
     }
   }
 
-  // 3. Edge Attraction
+  // 3. Edge Attraction (gentle target distance)
   for (const e of simEdges) {
     const a = e.sourceNode;
     const b = e.targetNode;
     const dx = b.x - a.x;
     const dy = b.y - a.y;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
-    const targetDist = e.edge_type === 'contains' ? 60 : 120;
-    const force = (dist - targetDist) * kSpring;
+    let dist = Math.sqrt(dx * dx + dy * dy);
+    if (dist === 0) dist = 1;
+    const targetDist = e.edge_type === 'contains' ? 45 : 85;
+    const force = (dist - targetDist) * kSpring * alpha;
     const fx = (dx / dist) * force;
     const fy = (dy / dist) * force;
     if (!a.pinned) { a.vx += fx; a.vy += fy; }
-    if (!b.pinned) { b.vx -= fx; b.vy -= fy; }
+    if (!b.pinned) { b.vx += fx; b.vy += fy; }
   }
 
-  // 4. Position update & velocity damping
+  // 4. Position update & velocity damping & max speed clamp
   for (const n of simNodes) {
     if (!n.pinned) {
       n.vx *= damping;
       n.vy *= damping;
+      const speed = Math.sqrt(n.vx * n.vx + n.vy * n.vy);
+      if (speed > maxVelocity) {
+        n.vx = (n.vx / speed) * maxVelocity;
+        n.vy = (n.vy / speed) * maxVelocity;
+      }
       n.x += n.vx;
       n.y += n.vy;
     }
@@ -313,19 +344,15 @@ function renderGraph() {
     const cfg = EDGE_CONFIG[e.edge_type] || EDGE_CONFIG.calls;
 
     if (isPathEdge) {
-      ctx.strokeStyle = '#22c55e';
-      ctx.lineWidth = 3.5;
-      ctx.shadowColor = '#22c55e';
-      ctx.shadowBlur = 10;
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2.5;
     } else if (selectedNode) {
       if (isConnected) {
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 2.5;
-        ctx.shadowColor = '#38bdf8';
-        ctx.shadowBlur = 8;
+        ctx.strokeStyle = '#71717a';
+        ctx.lineWidth = 1.5;
       } else {
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
-        ctx.lineWidth = 0.6;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.03)';
+        ctx.lineWidth = 0.5;
       }
     } else {
       ctx.strokeStyle = cfg.color;
@@ -354,45 +381,42 @@ function renderGraph() {
 
     ctx.globalAlpha = alpha;
 
-    // Glowing halo for selected / blast / path nodes
+    // Technical Concentric Rings (Zero Neon Glow / Zero Shadow Blur)
     if (isBlast) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + 8, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(244, 63, 94, 0.35)';
-      ctx.shadowColor = '#f43f5e';
-      ctx.shadowBlur = 16;
-      ctx.fill();
+      ctx.arc(n.x, n.y, n.radius + 5, 0, 2 * Math.PI);
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.6)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     } else if (isPathNode) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + 7, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(34, 197, 94, 0.35)';
-      ctx.shadowColor = '#22c55e';
-      ctx.shadowBlur = 14;
-      ctx.fill();
-    } else if (isSelected || isHovered) {
+      ctx.arc(n.x, n.y, n.radius + 4, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#d4d4d8';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+    } else if (isSelected) {
       ctx.beginPath();
-      ctx.arc(n.x, n.y, n.radius + 6, 0, 2 * Math.PI);
-      ctx.fillStyle = 'rgba(6, 182, 212, 0.3)';
-      ctx.shadowColor = '#06b6d4';
-      ctx.shadowBlur = 12;
-      ctx.fill();
+      ctx.arc(n.x, n.y, n.radius + 4, 0, 2 * Math.PI);
+      ctx.strokeStyle = '#71717a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     // Node Body
     ctx.beginPath();
     ctx.arc(n.x, n.y, n.radius, 0, 2 * Math.PI);
-    ctx.fillStyle = isBlast ? '#f43f5e' : (isPathNode ? '#22c55e' : n.color);
+    ctx.fillStyle = isBlast ? '#7f1d1d' : (isPathNode ? '#27272a' : (isSelected ? '#323238' : n.color));
     ctx.fill();
-    ctx.strokeStyle = isSelected ? '#ffffff' : 'rgba(255, 255, 255, 0.4)';
-    ctx.lineWidth = isSelected ? 2.5 : 1.2;
+    ctx.strokeStyle = isBlast ? '#fca5a5' : (isPathNode ? '#e2e8f0' : (isSelected ? '#ffffff' : (n.stroke || '#52525b')));
+    ctx.lineWidth = isSelected ? 1.8 : 1.0;
     ctx.stroke();
 
     // Node Label
     if (alpha > 0.4 || state.transform.scale > 0.8) {
-      ctx.font = isSelected ? 'bold 11px Inter, sans-serif' : '10px Inter, sans-serif';
-      ctx.fillStyle = isSelected ? '#ffffff' : (isConnected ? '#cbd5e1' : '#475569');
+      ctx.font = isSelected ? '600 10.5px Inter, sans-serif' : '10px Inter, sans-serif';
+      ctx.fillStyle = isSelected ? '#ffffff' : (isConnected ? '#a1a1aa' : '#404040');
       ctx.textAlign = 'center';
-      ctx.fillText(n.name, n.x, n.y + n.radius + 13);
+      ctx.fillText(n.name, n.x, n.y + n.radius + 12);
     }
 
     ctx.restore();
@@ -404,7 +428,7 @@ function renderGraph() {
 function drawGrid() {
   const gridSize = 40;
   ctx.save();
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.025)';
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.02)';
   ctx.lineWidth = 1;
   const startX = -state.transform.x / state.transform.scale;
   const startY = -state.transform.y / state.transform.scale;
@@ -512,6 +536,7 @@ function onMouseMove(e) {
   if (state.dragNode) {
     state.dragNode.x = world.x;
     state.dragNode.y = world.y;
+    wakeSimulation(0.12);
   } else if (state.isDragging) {
     const dx = e.clientX - state.lastMouse.x;
     const dy = e.clientY - state.lastMouse.y;
@@ -529,6 +554,7 @@ function onMouseUp() {
   if (state.dragNode) {
     state.dragNode.pinned = false;
     state.dragNode = null;
+    wakeSimulation(0.15);
   }
   state.isDragging = false;
 }
@@ -695,6 +721,7 @@ function initFilters() {
     if (check) {
       check.addEventListener('change', (e) => {
         state.filterTypes[type] = e.target.checked;
+        wakeSimulation(0.2);
       });
     }
   });

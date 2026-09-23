@@ -4,8 +4,6 @@ Parses Python source code into a Concrete Syntax Tree (CST),
 recursively discovers class and function boundaries, tags methods
 with enclosing classes, extracts docstrings, and builds enriched
 context headers.
-
-Built strictly from scratch without high-level framework wrappers.
 """
 from typing import List, Optional, Dict, Any, Tuple
 from pathlib import Path
